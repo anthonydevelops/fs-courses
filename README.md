@@ -21,4 +21,6 @@ pipenv run python main.py
 
 ## Tasks
 
-TODO
+- [x] Get all sections/courses to return for a (single) subject
+- [ ] Fix code to be more 'pythonic' and less spahgetti
+- [ ] Get sections/courses to return for every subject

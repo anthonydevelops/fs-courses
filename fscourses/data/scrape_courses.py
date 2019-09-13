@@ -1,4 +1,4 @@
-# main.py
+# scrape_courses.py
 # Focuses on scraping the desired contents of each class and
 # section associated through fresno states class search web application
 
@@ -105,8 +105,4 @@ def scrapeCourses(link):
 
     driver.quit()
 
-
-if __name__ == "__main__":
-    link = 'https://my.fresnostate.edu/psp/mfs/EMPLOYEE/SA/c/SA_LEARNER_SERVICES.CLASS_SEARCH.GBL'
-
-    scrapeCourses(link)
+    return sections
