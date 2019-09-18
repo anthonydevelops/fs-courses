@@ -16,7 +16,7 @@ cd fs-courses/
 
 # Get dependencies
 pipenv install --dev
-pipenv run python main.py
+pipenv run python -m fscourses
 ```
 
 ## Tasks

@@ -24,132 +24,184 @@ class Section:
         return "Title: %s, cNumber: %s, cName: %s, cTime: %s" % (self.title, self.number, self.name, self.time)
 
 
-def execute(link):
-    # Start Selenium session on Google Chrome & fetch webpage
-    options = webdriver.ChromeOptions()
-    options.add_argument("--start-maximized")
-    driver = webdriver.Chrome(
-        "/home/anthony/Desktop/drivers/chromedriver", chrome_options=options)
-    driver.get(link)
-    driver.implicitly_wait(3)
+class WebDriver:
+    def __init__(self, link):
+        self.link = link
+        self.generateBrowser()
+        self.execute()
+        self.stopBrowser()
 
-    # Change to iframe
-    frame = driver.find_element_by_css_selector('div#ptifrmtarget iframe')
-    driver.switch_to.frame(frame)
-    driver.implicitly_wait(3)
+    def generateBrowser(self):
+        # Start Selenium session on Google Chrome & fetch webpage
+        options = webdriver.ChromeOptions()
+        options.add_argument("--start-maximized")
+        self.driver = webdriver.Chrome(
+            "/home/anthony/Desktop/drivers/chromedriver", chrome_options=options)
+        self.driver.get(self.link)
+        self.driver.implicitly_wait(5)
+        # Change to iframe
+        frame = self.driver.find_element_by_css_selector(
+            'div#ptifrmtarget iframe')
+        self.driver.switch_to.frame(frame)
+        self.driver.implicitly_wait(5)
 
-    # Modify form elements for parsing
-    modForm(driver)
-
-
-def stopExecution(driver):
-    driver.quit()
-
-
-def modForm(driver):
-    subjectLetters = list(string.ascii_uppercase)
-    for subject in subjectLetters:
-        # Click 'choose subject'
-        driver.find_element_by_id('CLASS_SRCH_WRK2_SSR_PB_SUBJ_SRCH$0').click()
-        driver.implicitly_wait(3)
-        # Click letter for sorting
-        driver.find_element_by_id(
-            'SSR_CLSRCH_WRK2_SSR_ALPHANUM_' + subject).click()
-        driver.implicitly_wait(3)
-        totalSubjects = driver.find_elements_by_css_selector(
-            'table tbody tr td div span.PSHYPERLINK')
-        scrapeCourses(driver, subject, totalSubjects)
-    # End script process
-    stopExecution(driver)
-
-
-def reModForm(driver, subject):
-    # Click 'choose subject'
-    driver.find_element_by_id('CLASS_SRCH_WRK2_SSR_PB_SUBJ_SRCH$0').click()
-    driver.implicitly_wait(3)
-    # Click letter for sorting
-    driver.find_element_by_id(
-        'SSR_CLSRCH_WRK2_SSR_ALPHANUM_' + subject).click()
-    driver.implicitly_wait(3)
-
-
-def scrapeCourses(driver, subject, totalSubjects):
-    sections = []
-    for i in range(len(totalSubjects)):
-        # Click first link
-        driver.find_element_by_id(
-            'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).click()
-        driver.implicitly_wait(3)
-        # Submit subject chosen
-        driver.find_element_by_id(
-            'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).submit()
-        driver.implicitly_wait(3)
-        # Click career type
-        careerType = driver.find_element_by_id('SSR_CLSRCH_WRK_ACAD_CAREER$3')
+    def execute(self):
+        subjectLetters = list(string.ascii_uppercase)
+        # Set career type as undergraduate
+        careerType = self.driver.find_element_by_id(
+            'SSR_CLSRCH_WRK_ACAD_CAREER$3')
         careerType.click()
-        driver.implicitly_wait(3)
+        self.driver.implicitly_wait(5)
         careerOptions = careerType.find_elements_by_css_selector('option')
         for option in careerOptions:
             if option.get_attribute('value') == 'UGRD':
                 option.click()
-                driver.implicitly_wait(3)
-        # Click 'Show Open Classes Only' to toggle off & submit form
-        driver.find_element_by_id('SSR_CLSRCH_WRK_SSR_OPEN_ONLY$4').click()
-        driver.implicitly_wait(3)
-        driver.find_element_by_id('CLASS_SRCH_WRK2_SSR_PB_CLASS_SRCH').click()
-        driver.implicitly_wait(3)
+                self.driver.implicitly_wait(5)
+        # Click 'Show Open Classes Only' to toggle off
+        allClasses = self.driver.find_element_by_id(
+            'SSR_CLSRCH_WRK_SSR_OPEN_ONLY$chk$4')
+        if allClasses.get_attribute('value') == "Y":
+            self.driver.find_element_by_id(
+                'SSR_CLSRCH_WRK_SSR_OPEN_ONLY$4').click()
+            self.driver.implicitly_wait(5)
+        # Click 'select subject'
+        self.driver.find_element_by_id(
+            'CLASS_SRCH_WRK2_SSR_PB_SUBJ_SRCH$0').click()
+        self.driver.implicitly_wait(5)
+        # For each letter, sort and scrape subject data
+        for letter in subjectLetters:
+            # Click letter for sorting
+            self.driver.find_element_by_id(
+                'SSR_CLSRCH_WRK2_SSR_ALPHANUM_' + letter).click()
+            self.driver.implicitly_wait(5)
+            # Get list of all subjects
+            totalSubjects = self.driver.find_elements_by_css_selector(
+                'table tbody tr td div span.PSHYPERLINK')
+            self.driver.implicitly_wait(5)
+            self.scrapeCourses(letter, totalSubjects)
+        # End script process
+        self.stopBrowser()
 
-        if driver.find_elements_by_id('DERIVED_CLSMSG_ERROR_TEXT'):
-            reModForm(driver, subject)
-            continue
+    def scrapeCourses(self, letter, totalSubjects):
+        sections = []
+        print(len(totalSubjects))
+        for i in range(len(totalSubjects)):
+            # Find the next subject to scrape
+            if self.driver.find_elements_by_id('SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)):
+                # Click link to subject
+                self.driver.find_element_by_id(
+                    'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).click()
+                self.driver.implicitly_wait(5)
+                # Submit subject chosen
+                self.driver.find_element_by_id(
+                    'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).submit()
+                self.driver.implicitly_wait(5)
+            else:
+                self.driver.implicitly_wait(5)
+                # Click link to subject
+                self.driver.find_element_by_id(
+                    'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).click()
+                self.driver.implicitly_wait(5)
+                # Submit subject chosen
+                self.driver.find_element_by_id(
+                    'SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)).submit()
+                self.driver.implicitly_wait(5)
 
-        # Check pop-up notification
-        if driver.find_elements_by_id('#ICSave'):
-            driver.find_element_by_id('#ICSave').click()
-            driver.implicitly_wait(3)
+            # Submit form search
+            self.driver.find_element_by_id(
+                'CLASS_SRCH_WRK2_SSR_PB_CLASS_SRCH').click()
+            self.driver.implicitly_wait(5)
 
-        # Parse course content & titles
-        id = 0
-        courseTitles = driver.find_elements_by_css_selector(
-            'td.PAGROUPBOXLABELLEVEL1 div')
+            # Check if error msg returned
+            if self.driver.find_elements_by_css_selector('span.PSPAGE#DERIVED_CLSMSG_ERROR_TEXT'):
+                time.sleep(2)
+                if len(self.driver.find_elements_by_css_selector('td.PAGROUPBOXLABELLEVEL1 div')) < 1:
+                    print("error error")
+                    self.newSearch(letter)
+                    continue
 
-        # For each title, assign the sections that correlate
-        for index, title in enumerate(courseTitles):
-            course = driver.find_element_by_id(
-                'ACE_SSR_CLSRSLT_WRK_GROUPBOX2$' + str(index))
-            numOfSections = course.find_elements_by_css_selector(
-                'table.PSLEVEL1GRIDNBONBO')
-            # Get each section content and store in a list
-            for num in range(len(numOfSections)):
-                driver.implicitly_wait(3)
-                sectionNumber = driver.find_element_by_id(
-                    'MTG_CLASS_NBR$' + str(id)).text
-                sectionName = driver.find_element_by_id(
-                    'MTG_CLASSNAME$' + str(id)).text
-                sectionTime = driver.find_element_by_id(
-                    'MTG_DAYTIME$' + str(id)).text
-                sectionRoom = driver.find_element_by_id(
-                    'MTG_ROOM$' + str(id)).text
-                sectionInstr = driver.find_element_by_id(
-                    'MTG_INSTR$' + str(id)).text
-                sectionDates = driver.find_element_by_id(
-                    'MTG_TOPIC$' + str(id)).text
-                # Parse img for alt attribute
-                sectionDivStatus = driver.find_element_by_id(
-                    'win0divDERIVED_CLSRCH_SSR_STATUS_LONG$' + str(id))
-                sectionImgStatus = sectionDivStatus.find_element_by_css_selector(
-                    'img')
-                sectionStatus = sectionImgStatus.get_attribute('alt')
-                # Assign section & store in list
-                section = Section(title.text, sectionNumber, sectionName, sectionTime,
-                                  sectionRoom, sectionInstr, sectionDates, sectionStatus)
-                sections.append(section)
-                id += 1
-        # Restart search
-        driver.find_element_by_id('CLASS_SRCH_WRK2_SSR_PB_NEW_SEARCH').click()
-        driver.implicitly_wait(3)
-        reModForm(driver, subject)
+            # Check pop-up notification
+            if self.driver.find_elements_by_id('#ICSave'):
+                self.driver.find_element_by_id('#ICSave').click()
+                self.driver.implicitly_wait(5)
 
-    # # Check section contents
-    for section in sections:
-        print(section)
+            # Parse course content & titles
+            id = 0
+            courseTitles = self.driver.find_elements_by_css_selector(
+                'td.PAGROUPBOXLABELLEVEL1 div')
+
+            # For each title, assign the sections that correlate
+            for index, title in enumerate(courseTitles):
+                course = self.driver.find_element_by_id(
+                    'ACE_SSR_CLSRSLT_WRK_GROUPBOX2$' + str(index))
+                numOfSections = course.find_elements_by_css_selector(
+                    'table.PSLEVEL1GRIDNBONBO')
+                # Get each section content and store in a list
+                for num in range(len(numOfSections)):
+                    self.driver.implicitly_wait(5)
+                    sectionNumber = self.driver.find_element_by_id(
+                        'MTG_CLASS_NBR$' + str(id)).text
+                    sectionName = self.driver.find_element_by_id(
+                        'MTG_CLASSNAME$' + str(id)).text
+                    sectionTime = self.driver.find_element_by_id(
+                        'MTG_DAYTIME$' + str(id)).text
+                    sectionRoom = self.driver.find_element_by_id(
+                        'MTG_ROOM$' + str(id)).text
+                    sectionInstr = self.driver.find_element_by_id(
+                        'MTG_INSTR$' + str(id)).text
+                    sectionDates = self.driver.find_element_by_id(
+                        'MTG_TOPIC$' + str(id)).text
+                    # Parse img for alt attribute
+                    sectionDivStatus = self.driver.find_element_by_id(
+                        'win0divDERIVED_CLSRCH_SSR_STATUS_LONG$' + str(id))
+                    sectionImgStatus = sectionDivStatus.find_element_by_css_selector(
+                        'img')
+                    sectionStatus = sectionImgStatus.get_attribute('alt')
+                    # Assign section & store in list
+                    section = Section(title.text, sectionNumber, sectionName, sectionTime,
+                                      sectionRoom, sectionInstr, sectionDates, sectionStatus)
+                    sections.append(section)
+                    id += 1
+            # Restart search
+            self.modifySearch(letter)
+
+            # Check section contents
+            for section in sections:
+                print(section)
+
+    def stopBrowser(self):
+        self.driver.quit()
+
+    def modifySearch(self, letter):
+        # Click 'modify search'
+        self.driver.find_element_by_id('CLASS_SRCH_WRK2_SSR_PB_MODIFY').click()
+        self.driver.implicitly_wait(5)
+        self.newSearch(letter)
+
+    def newSearch(self, letter):
+        # Click 'select subject'
+        self.driver.find_element_by_id(
+            'CLASS_SRCH_WRK2_SSR_PB_SUBJ_SRCH$0').click()
+        self.driver.implicitly_wait(5)
+        # Click letter for sorting
+        self.driver.find_element_by_id(
+            'SSR_CLSRCH_WRK2_SSR_ALPHANUM_' + letter).click()
+        self.driver.implicitly_wait(5)
+
+
+# def execute(link):
+#     # Start Selenium session on Google Chrome & fetch webpage
+#     options = self.ChromeOptions()
+#     options.add_argument("--start-maximized")
+#     driver = self.Chrome(
+#         "/home/anthony/Desktop/drivers/chromedriver", chrome_options=options)
+#     driver.get(link)
+#     driver.implicitly_wait(5)
+
+#     # Change to iframe
+#     frame = driver.find_element_by_css_selector('div#ptifrmtarget iframe')
+#     driver.switch_to.frame(frame)
+#     driver.implicitly_wait(5)
+
+#     # Modify form elements for parsing
+#     modForm(driver)
