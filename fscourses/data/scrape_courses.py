@@ -5,6 +5,7 @@
 import time
 import re
 import string
+import json
 from selenium import webdriver
 
 
@@ -29,7 +30,6 @@ class WebDriver:
         self.link = link
         self.generateBrowser()
         self.execute()
-        self.stopBrowser()
 
     def generateBrowser(self):
         # Start Selenium session on Google Chrome & fetch webpage
@@ -46,6 +46,7 @@ class WebDriver:
         self.driver.implicitly_wait(5)
 
     def execute(self):
+        data = []
         subjectLetters = list(string.ascii_uppercase)
         # Set career type as undergraduate
         careerType = self.driver.find_element_by_id(
@@ -78,14 +79,20 @@ class WebDriver:
             totalSubjects = self.driver.find_elements_by_css_selector(
                 'table tbody tr td div span.PSHYPERLINK')
             self.driver.implicitly_wait(5)
-            self.scrapeCourses(letter, totalSubjects)
+            sections = self.scrapeCourses(letter, totalSubjects)
+            data.append(sections)
+
         # End script process
         self.stopBrowser()
 
+        # Write sample classes to JSON file
+        with open('./fscourses/data/data.json', 'w') as outfile:
+            for i in data:
+                json.dump([ob.__dict__ for ob in i], outfile)
+
     def scrapeCourses(self, letter, totalSubjects):
         sections = []
-        print(len(totalSubjects))
-        for i in range(len(totalSubjects)):
+        for i in range(len(totalSubjects)-1):
             # Find the next subject to scrape
             if self.driver.find_elements_by_id('SSR_CLSRCH_WRK2_SSR_PB_SELECT_SUBJ$' + str(i)):
                 # Click link to subject
@@ -162,12 +169,11 @@ class WebDriver:
                                       sectionRoom, sectionInstr, sectionDates, sectionStatus)
                     sections.append(section)
                     id += 1
+
             # Restart search
             self.modifySearch(letter)
 
-            # Check section contents
-            for section in sections:
-                print(section)
+        return sections
 
     def stopBrowser(self):
         self.driver.quit()
@@ -187,21 +193,3 @@ class WebDriver:
         self.driver.find_element_by_id(
             'SSR_CLSRCH_WRK2_SSR_ALPHANUM_' + letter).click()
         self.driver.implicitly_wait(5)
-
-
-# def execute(link):
-#     # Start Selenium session on Google Chrome & fetch webpage
-#     options = self.ChromeOptions()
-#     options.add_argument("--start-maximized")
-#     driver = self.Chrome(
-#         "/home/anthony/Desktop/drivers/chromedriver", chrome_options=options)
-#     driver.get(link)
-#     driver.implicitly_wait(5)
-
-#     # Change to iframe
-#     frame = driver.find_element_by_css_selector('div#ptifrmtarget iframe')
-#     driver.switch_to.frame(frame)
-#     driver.implicitly_wait(5)
-
-#     # Modify form elements for parsing
-#     modForm(driver)
