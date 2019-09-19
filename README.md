@@ -22,5 +22,5 @@ pipenv run python -m fscourses
 ## Tasks
 
 - [x] Get all sections/courses to return for a (single) subject
-- [ ] Fix code to be more 'pythonic' and less spahgetti
-- [ ] Get sections/courses to return for every subject
+- [x] Fix code to be more 'pythonic' and less spahgetti
+- [x] Get sections/courses to return for every subject
